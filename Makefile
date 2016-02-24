@@ -17,7 +17,7 @@ PLV8_VERSION = 1.5.0-dev1
 PG_CONFIG = pg_config
 PGXS := $(shell $(PG_CONFIG) --pgxs)
 
-PG_VERSION_NUM := $(shell cat `$(PG_CONFIG) --includedir`/pg_config*.h \
+PG_VERSION_NUM := $(shell cat `$(PG_CONFIG) --includedir-server`/pg_config*.h \
 		   | perl -ne 'print $$1 and exit if /PG_VERSION_NUM\s+(\d+)/')
 
 # set your custom C++ compler
@@ -36,8 +36,8 @@ DATA += plcoffee.control plcoffee--$(PLV8_VERSION).sql \
 		plls.control plls--$(PLV8_VERSION).sql
 endif
 DATA_built = plv8.sql
-REGRESS = init-extension plv8 inline json startup_pre startup varparam json_conv \
-		  jsonb_conv window guc es6 arraybuffer
+REGRESS = init-extension plv8 plv8-errors inline json startup_pre startup varparam json_conv \
+ 		  jsonb_conv window guc es6 arraybuffer composites
 ifndef DISABLE_DIALECT
 REGRESS += dialect
 endif
@@ -45,7 +45,10 @@ endif
 SHLIB_LINK += -lv8
 ifdef V8_OUTDIR
 SHLIB_LINK += -L$(V8_OUTDIR)
+else
+SHLIB_LINK += -lv8_libplatform
 endif
+
 
 # v8's remote debugger is optional at the moment, since we don't know
 # how much of the v8 installation is built with debugger enabled.
@@ -69,9 +72,7 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
-		CCFLAGS += -stdlib=libstdc++
-		SHLIB_LINK := -stdlib=libstdc++
-		SHLIB_LINK += -lv8_base -lv8_libbase -lv8_libplatform -lv8_snapshot
+		# nothing to do anymore, setting -stdlib=libstdc++ breaks things
 	endif
 endif
 

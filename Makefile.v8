@@ -64,6 +64,7 @@ SHLIB_LINK := $(filter-out -lv8, $(SHLIB_LINK))
 ifeq ($(OS),Windows_NT)
 	# noop for now
 else
+	SHLIB_LINK += -L$(AUTOV8_OUT)
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
 		CCFLAGS += -stdlib=libstdc++

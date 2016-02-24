@@ -236,67 +236,6 @@ $$
 LANGUAGE plv8;
 SELECT * FROM return_sql();
 
-CREATE FUNCTION test_sql_error() RETURNS void AS $$ plv8.execute("ERROR") $$ LANGUAGE plv8;
-SELECT test_sql_error();
-
-CREATE FUNCTION catch_sql_error() RETURNS void AS $$
-try {
-	plv8.execute("throw SQL error");
-	plv8.elog(NOTICE, "should not come here");
-} catch (e) {
-	plv8.elog(NOTICE, e);
-}
-$$ LANGUAGE plv8;
-SELECT catch_sql_error();
-
-CREATE FUNCTION catch_sql_error_2() RETURNS text AS $$
-try {
-	plv8.execute("throw SQL error");
-	plv8.elog(NOTICE, "should not come here");
-} catch (e) {
-	plv8.elog(NOTICE, e);
-	return plv8.execute("select 'and can execute queries again' t").shift().t;
-}
-$$ LANGUAGE plv8;
-SELECT catch_sql_error_2();
-
-CREATE FUNCTION catch_sql_error_3() RETURNS text AS $$
-try {
-	plv8.execute("throw SQL error");
-	plv8.elog(NOTICE, "should not come here");
-} catch (e) {
-	plv8.elog(NOTICE, e.sqlerrcode);
-	return e.sqlerrcode;
-}
-$$ LANGUAGE plv8;
-SELECT catch_sql_error_3();
-
--- subtransaction()
-CREATE TABLE subtrant(a int);
-CREATE FUNCTION test_subtransaction_catch() RETURNS void AS $$
-try {
-	plv8.subtransaction(function(){
-		plv8.execute("INSERT INTO subtrant VALUES(1)");
-		plv8.execute("INSERT INTO subtrant VALUES(1/0)");
-	});
-} catch (e) {
-	plv8.elog(NOTICE, e);
-	plv8.execute("INSERT INTO subtrant VALUES(2)");
-}
-$$ LANGUAGE plv8;
-SELECT test_subtransaction_catch();
-SELECT * FROM subtrant;
-
-TRUNCATE subtrant;
-CREATE FUNCTION test_subtransaction_throw() RETURNS void AS $$
-plv8.subtransaction(function(){
-	plv8.execute("INSERT INTO subtrant VALUES(1)");
-	plv8.execute("INSERT INTO subtrant VALUES(1/0)");
-});
-$$ LANGUAGE plv8;
-SELECT test_subtransaction_throw();
-SELECT * FROM subtrant;
-
 -- REPLACE FUNCTION
 CREATE FUNCTION replace_test() RETURNS integer AS $$ return 1; $$ LANGUAGE plv8;
 SELECT replace_test();
@@ -474,25 +413,6 @@ SELECT plv8_quotes('select');
 SELECT plv8_quotes('kevin''s name');
 SELECT plv8_quotes(NULL);
 
--- exception handling
-CREATE OR REPLACE FUNCTION v8_test_throw() RETURNS float AS
-$$ 
-throw new Error('Error');
-$$
-LANGUAGE plv8;
-
-CREATE OR REPLACE FUNCTION v8_test_catch_throw() RETURNS text AS
-$$
- try{
-   var res = plv8.execute('select * from  v8_test_throw()');
- } catch(e) {
-   return JSON.stringify({"result": "error"});
- }
-$$
-language plv8;
-
-SELECT v8_test_catch_throw();
-
 DROP TABLE IF EXISTS t_attdrop CASCADE;
 CREATE TABLE t_attdrop AS SELECT i a, i b, i c FROM generate_series(1, 10)i;
 CREATE OR REPLACE FUNCTION f_attdrop(tbl t_attdrop) RETURNS int AS $$
@@ -506,7 +426,7 @@ ALTER TABLE t_attdrop DROP COLUMN b;
 SELECT f_attdrop(t.*) FROM t;
 SELECT f_attdrop(2);
 
-create table plv8test ( id serial primary key, data json, sum integer, num integer);
+create table plv8test ( id numeric, data json, sum integer, num integer);
 insert into plv8test (data, sum, num) values ('{"a": 1, "b": 2}', 0, 0);
 insert into plv8test (data, sum, num) values ('{"a": 3, "b": 4}', 0, 0);
 insert into plv8test (data, sum, num) values ('{"a": 3, "b": 4}', 0, 0);
